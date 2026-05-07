@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import common.InterfazDeServer;
 import common.Juego;
-import common.Pais;
 import common.Moneda;
+import common.Pais;
 
 public class ServerImpl implements InterfazDeServer {
     private ArrayList<Juego> BD_juegos = new ArrayList<>();
@@ -74,17 +74,8 @@ public class ServerImpl implements InterfazDeServer {
             JsonNode appData = jsonNode.get(appIdStr);
             if (appData != null) {
                 JsonNode dataNode = appData.get("data");
-                String precio = dataNode.get("price_overview").get("final_formatted").asText();
                 String currency = dataNode.get("price_overview").get("currency").asText();
-                String precioLimpio = precio.replaceAll("[^\\d,\\.]", "");
-
-                if (precioLimpio.matches(".*[\\.,]\\d{2}$")) {
-                    precioLimpio = precioLimpio.replace(",", ".");
-                } else {
-                    precioLimpio = precioLimpio.replaceAll("[\\.,]", "");
-                }
-
-                double precioLocal = Double.parseDouble(precioLimpio);
+                double precioLocal = dataNode.get("price_overview").get("final").asDouble() / 100.0;
 
                 double precioEnUSD = convertirPrecioAUSD(precioLocal, currency);
 
@@ -183,7 +174,7 @@ public class ServerImpl implements InterfazDeServer {
                     .collect(Collectors.toList());
 
             CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-            allOf.join(); 
+            allOf.join();
 
             return futures.stream()
                     .map(CompletableFuture::join)
@@ -284,7 +275,12 @@ public class ServerImpl implements InterfazDeServer {
 
     @Override
     public synchronized ArrayList<Juego> obtenerJuegos() {
-        return new ArrayList<>(BD_juegos); 
+        return new ArrayList<>(BD_juegos);
+    }
+
+    @Override
+    public synchronized ArrayList<Pais> obtenerPaises() {
+        return new ArrayList<>(BD_paises);
     }
 
     @Override
@@ -326,24 +322,6 @@ public class ServerImpl implements InterfazDeServer {
         }
 
         System.out.println("No se encontró un juego que contenga: " + fragmentoNombre);
-        return null;
-    }
-
-    @Override
-    public synchronized Pais buscarPais(String fragmentoNombre) {
-        for (Pais pais : BD_paises) {
-            if (pais.getNombre().toUpperCase().equals(fragmentoNombre.toUpperCase())) {
-                return pais;
-            }
-        }
-
-        for (Pais pais : BD_paises) {
-            if (pais.getNombre().toUpperCase().contains(fragmentoNombre.toUpperCase())) {
-                return pais;
-            }
-        }
-
-        System.out.println("No se encontró un país que contenga: " + fragmentoNombre);
         return null;
     }
 
@@ -483,7 +461,6 @@ public class ServerImpl implements InterfazDeServer {
             Statement stmt = connection.createStatement();
 
             stmt.executeUpdate("DELETE FROM games");
-            stmt.executeUpdate("DELETE FROM countries");
             stmt.executeUpdate("DELETE FROM currencies");
 
             // Insertar juegos
@@ -493,14 +470,6 @@ public class ServerImpl implements InterfazDeServer {
                 psJuego.setInt(1, juego.getId());
                 psJuego.setString(2, juego.getNombre());
                 psJuego.executeUpdate();
-            }
-
-            String insertPais = "INSERT INTO countries (country_code, country_name) VALUES (?, ?)";
-            PreparedStatement psPais = connection.prepareStatement(insertPais);
-            for (Pais pais : BD_paises) {
-                psPais.setString(1, pais.getId());
-                psPais.setString(2, pais.getNombre());
-                psPais.executeUpdate();
             }
 
             String insertMoneda = "INSERT INTO currencies (currency_code, conversion_rate_to_usd) VALUES (?, ?)";

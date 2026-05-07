@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import common.Juego;
 import common.Moneda;
-import common.Pais;
 import common.Request;
 import common.Response;
 
@@ -30,9 +29,8 @@ public class ClientHandler implements Runnable {
         System.out.println("[+] Cliente conectado: " + clientAddress);
 
         try (
-            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-            ObjectInputStream  in  = new ObjectInputStream(clientSocket.getInputStream())
-        ) {
+                ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
             boolean running = true;
             while (running) {
                 Request request;
@@ -51,7 +49,7 @@ public class ClientHandler implements Runnable {
 
                 out.writeObject(response);
                 out.flush();
-                out.reset(); 
+                out.reset();
 
                 if (request.getCommand() == Request.Command.CERRAR_CONEXION) {
                     running = false;
@@ -60,7 +58,10 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             System.err.println("[-] Error de I/O con cliente " + clientAddress + ": " + e.getMessage());
         } finally {
-            try { clientSocket.close(); } catch (IOException ignored) {}
+            try {
+                clientSocket.close();
+            } catch (IOException ignored) {
+            }
             System.out.println("[-] Cliente desconectado: " + clientAddress);
         }
     }
@@ -90,14 +91,6 @@ public class ClientHandler implements Runnable {
                 Juego encontrado = server.buscarJuego((String) p[0]);
                 return new Response(true, encontrado);
 
-            case GET_PRICE_FROM_API_STEAM:
-                double precio = server.getPriceFromApiSteam((Integer) p[0], (String) p[1]);
-                return new Response(true, precio);
-
-            case BUSCAR_PAIS:
-                Pais pais = server.buscarPais((String) p[0]);
-                return new Response(true, pais);
-
             case CONVERTIR_PRECIO_A_USD:
                 double precioUSD = server.convertirPrecioAUSD((Double) p[0], (String) p[1]);
                 return new Response(true, precioUSD);
@@ -118,6 +111,9 @@ public class ClientHandler implements Runnable {
             case OBTENER_JUEGOS_EN_COMUN:
                 ArrayList<Juego> comunes = server.obtenerJuegosEnComun((ArrayList<String>) p[0]);
                 return new Response(true, comunes);
+
+            case OBTENER_PAISES:
+                return new Response(true, server.obtenerPaises());
 
             default:
                 return new Response("Comando desconocido: " + request.getCommand());

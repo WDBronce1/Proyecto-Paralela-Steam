@@ -12,13 +12,12 @@ public class Request implements Serializable {
         AGREGAR_JUEGO,
         ELIMINAR_JUEGO,
         BUSCAR_JUEGO,
-        GET_PRICE_FROM_API_STEAM,
-        BUSCAR_PAIS,
         CONVERTIR_PRECIO_A_USD,
         BUSCAR_MONEDA,
         GET_GAME_FROM_API_STEAM,
         GET_PRICES_FROM_MULTIPLE_COUNTRIES,
-        OBTENER_JUEGOS_EN_COMUN
+        OBTENER_JUEGOS_EN_COMUN,
+        OBTENER_PAISES
     }
 
     private Command command;

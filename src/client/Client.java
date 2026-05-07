@@ -48,8 +48,7 @@ public class Client {
                 System.out.println("[2] Ver lista de juegos");
                 System.out.println("[3] Añadir nuevo juego");
                 System.out.println("[4] Buscar juegos en común (Modo Familiar)");
-                System.out.println("[5] Comparar precio de juego en otro país distinto al local");
-                System.out.println("[6] Comparar precio de juego en 10 países");
+                System.out.println("[5] Comparar precio en múltiples países");
                 System.out.println("[0] Finalizar programa");
                 System.out.print("Ingrese una opción: ");
 
@@ -67,8 +66,7 @@ public class Client {
                     case 2: listarJuegos();                break;
                     case 3: agregarJuego(sc);              break;
                     case 4: buscarJuegosEnComunFamiliar(sc); break;
-                    case 5: compararPrecioEnRegion(sc);    break;
-                    case 6: compararPrecioEnRegiones(sc);  break;
+                    case 5: compararPrecioEnRegiones(sc);  break;
                     case 0:
                         System.out.println("Cerrando cliente. ¡Hasta luego!");
                         break;
@@ -215,49 +213,6 @@ public class Client {
         }
     }
 
-    private void compararPrecioEnRegion(Scanner sc) {
-        try {
-            System.out.print("Ingrese el nombre del juego a comparar: ");
-            String nombre = sc.nextLine();
-
-            Response rJuego = sendRequest(new Request(Request.Command.BUSCAR_JUEGO, nombre));
-            Juego juego = (Juego) rJuego.getResult();
-            if (juego == null) {
-                System.out.println("No se encontró el juego: " + nombre);
-                return;
-            }
-
-            System.out.print("Ingrese el nombre del país a realizar la comparativa: ");
-            String nombre_pais = sc.nextLine();
-
-            Response rPais = sendRequest(new Request(Request.Command.BUSCAR_PAIS, nombre_pais));
-            Pais pais = (Pais) rPais.getResult();
-            if (pais == null) {
-                System.out.println("No se encontró el país: " + nombre_pais);
-                return;
-            }
-
-            Response rLocal = sendRequest(new Request(Request.Command.GET_PRICE_FROM_API_STEAM, juego.getId(), "cl"));
-            double precioLocal = (Double) rLocal.getResult();
-
-            Response rComp = sendRequest(new Request(Request.Command.GET_PRICE_FROM_API_STEAM, juego.getId(), pais.getId()));
-            double precioComparativa = (Double) rComp.getResult();
-
-            String texto1 = "Precio Local: $" + precioLocal + " USD";
-            String texto2 = "Precio en " + pais.getNombre() + ": $" + precioComparativa + " USD";
-            int maxAncho = Math.max(texto1.length(), texto2.length());
-            texto1 = String.format("%-" + maxAncho + "s", texto1);
-            texto2 = String.format("%-" + maxAncho + "s", texto2);
-
-            System.out.println("\nComparativa en USD de precios entre el \nPrecio Local (Chile) y " + pais.getNombre() + ":");
-            System.out.println("|| " + texto1 + " ||");
-            System.out.println("|| " + texto2 + " ||\n");
-
-        } catch (Exception e) {
-            System.err.println("Error al buscar juego: " + e.getMessage());
-        }
-    }
-
     private void compararPrecioEnRegiones(Scanner sc) {
         try {
             System.out.print("Ingrese el nombre del juego a comparar: ");
@@ -270,11 +225,22 @@ public class Client {
                 return;
             }
 
-            ArrayList<String> codigosPaises = new ArrayList<>(Arrays.asList(
-                    "cl", "br", "ca", "es", "in", "cn", "mx", "tr", "au", "us"
-            ));
+            Response rPaises = sendRequest(new Request(Request.Command.OBTENER_PAISES));
+            if (!rPaises.isSuccess()) {
+                System.err.println("Error al obtener países: " + rPaises.getErrorMessage());
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            ArrayList<Pais> paisesBD = (ArrayList<Pais>) rPaises.getResult();
+            if (paisesBD.isEmpty()) {
+                System.out.println("No hay países registrados en la base de datos.");
+                return;
+            }
 
-            System.out.println("Consultando la API de Steam en paralelo para " + codigosPaises.size() + " países... por favor espera.");
+            ArrayList<String> codigosPaises = new ArrayList<>();
+            for (Pais p : paisesBD) {
+                codigosPaises.add(p.getId());
+            }
 
             long startTime = System.currentTimeMillis();
             Response rPrecios = sendRequest(new Request(Request.Command.GET_PRICES_FROM_MULTIPLE_COUNTRIES,
@@ -285,24 +251,16 @@ public class Client {
                 System.err.println("Error del servidor: " + rPrecios.getErrorMessage());
                 return;
             }
+            
             @SuppressWarnings("unchecked")
             ArrayList<Double> precios = (ArrayList<Double>) rPrecios.getResult();
 
-            System.out.println("¡Datos obtenidos en paralelo en " + (endTime - startTime) + " ms!");
             System.out.println("\nComparativa en USD de Precios del juego: " + juego.getNombre() + ":");
 
-            String[] lineas = {
-                "Precio Local (Chile): $"    + precios.get(0) + " USD",
-                "Precio en Brasil: $"        + precios.get(1) + " USD",
-                "Precio en Canada: $"        + precios.get(2) + " USD",
-                "Precio en España: $"        + precios.get(3) + " USD",
-                "Precio en India: $"         + precios.get(4) + " USD",
-                "Precio en China: $"         + precios.get(5) + " USD",
-                "Precio en Mexico: $"        + precios.get(6) + " USD",
-                "Precio en Turquía: $"       + precios.get(7) + " USD",
-                "Precio en Australia: $"     + precios.get(8) + " USD",
-                "Precio en Estados Unidos $: " + precios.get(9) + " USD"
-            };
+            String[] lineas = new String[paisesBD.size()];
+            for (int i = 0; i < paisesBD.size(); i++) {
+                lineas[i] = "Precio en " + paisesBD.get(i).getNombre() + ": $" + precios.get(i) + " USD";
+            }
 
             int maxLength = 0;
             for (String linea : lineas) maxLength = Math.max(maxLength, linea.length());

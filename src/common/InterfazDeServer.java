@@ -1,22 +1,18 @@
 package common;
 
-import java.rmi.Remote;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-public interface InterfazDeServer extends Remote {
-	public void cerrarConexion() throws RemoteException;
-	public ArrayList<Juego> obtenerJuegos() throws RemoteException;
-    public Juego agregarJuego(Juego juego) throws RemoteException, JsonProcessingException;
-    public boolean eliminarJuego(String nombre) throws RemoteException;
-    public Juego buscarJuego(String nombre) throws RemoteException;
-    public double getPriceFromApiSteam(int id_juego, String id_pais) throws RemoteException;
-    public Pais buscarPais(String nombre) throws RemoteException;
-    public double convertirPrecioAUSD(double precioLocal, String moneda) throws RemoteException;
-    public Moneda buscarMoneda(String id) throws RemoteException;
-    public Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego) throws RemoteException, JsonProcessingException ;
-    public ArrayList<Double> getPricesFromMultipleCountries(int id_juego, ArrayList<String> id_paises) throws RemoteException;
-    public ArrayList<Juego> obtenerJuegosEnComun(ArrayList<String> steamIds) throws RemoteException;
+public interface InterfazDeServer {
+    public void cerrarConexion();
+    public ArrayList<Juego> obtenerJuegos();
+    public Juego agregarJuego(Juego juego) throws Exception;
+    public boolean eliminarJuego(String nombre);
+    public Juego buscarJuego(String nombre);
+    public double getPriceFromApiSteam(int id_juego, String id_pais);
+    public Pais buscarPais(String nombre);
+    public double convertirPrecioAUSD(double precioLocal, String moneda);
+    public Moneda buscarMoneda(String id);
+    public Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego) throws Exception;
+    public ArrayList<Double> getPricesFromMultipleCountries(int id_juego, ArrayList<String> id_paises);
+    public ArrayList<Juego> obtenerJuegosEnComun(ArrayList<String> steamIds);
 }

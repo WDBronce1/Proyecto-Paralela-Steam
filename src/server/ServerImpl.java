@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -35,13 +33,12 @@ public class ServerImpl implements InterfazDeServer {
     private Connection connection = null;
     private static final String STEAM_API_KEY = "8D9E6D169F3A14A3D20CEA4A6E289CCC";
 
-    public ServerImpl() throws RemoteException {
+    public ServerImpl() {
         conectarBD();
-        UnicastRemoteObject.exportObject(this, 0);
     }
 
     @Override
-    public double getPriceFromApiSteam(int id_juego, String id_pais) throws RemoteException {
+    public synchronized double getPriceFromApiSteam(int id_juego, String id_pais) {
         String output = null;
         try {
             URL apiUrl = new URL(
@@ -105,8 +102,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego)
-            throws RemoteException, JsonProcessingException {
+    public synchronized Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego)
+            throws Exception {
         String output = null;
         try {
             URL apiUrl = new URL(
@@ -169,11 +166,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public ArrayList<Double> getPricesFromMultipleCountries(int id_juego, ArrayList<String> id_paises)
-            throws RemoteException {
-        // Utilizamos un ExecutorService para lanzar peticiones en paralelo.
-        // Hacemos el pool del tamaño de la cantidad de países o de un máximo razonable
-        // (ej. 20)
+    public ArrayList<Double> getPricesFromMultipleCountries(int id_juego, ArrayList<String> id_paises) {
         int numThreads = Math.min(id_paises.size(), 20);
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
@@ -182,23 +175,20 @@ public class ServerImpl implements InterfazDeServer {
                     .map(pais -> CompletableFuture.supplyAsync(() -> {
                         try {
                             return getPriceFromApiSteam(id_juego, pais);
-                        } catch (RemoteException e) {
+                        } catch (Exception e) {
                             System.err.println("Error obteniendo precio para " + pais + ": " + e.getMessage());
                             return 0.0;
                         }
                     }, executor))
                     .collect(Collectors.toList());
 
-            // Esperar a que todas las peticiones asincrónicas terminen
             CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-            allOf.join(); // Bloquea hasta que todos terminen
+            allOf.join(); 
 
-            // Recolectar los resultados
             return futures.stream()
                     .map(CompletableFuture::join)
                     .collect(Collectors.toCollection(ArrayList::new));
         } finally {
-            // Apagar el executor para liberar recursos
             executor.shutdown();
         }
     }
@@ -254,7 +244,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public ArrayList<Juego> obtenerJuegosEnComun(ArrayList<String> steamIds) throws RemoteException {
+    public ArrayList<Juego> obtenerJuegosEnComun(ArrayList<String> steamIds) {
         if (steamIds == null || steamIds.isEmpty())
             return new ArrayList<>();
 
@@ -275,7 +265,6 @@ public class ServerImpl implements InterfazDeServer {
             if (todasLasBibliotecas.isEmpty())
                 return new ArrayList<>();
 
-            // Usamos la primera biblioteca como base de la intersección
             ArrayList<Juego> interseccion = new ArrayList<>(todasLasBibliotecas.get(0));
 
             for (int i = 1; i < todasLasBibliotecas.size(); i++) {
@@ -284,7 +273,6 @@ public class ServerImpl implements InterfazDeServer {
                     idsActuales.add(j.getId());
                 }
 
-                // Remover de la intersección los que NO están en la biblioteca actual
                 interseccion.removeIf(juegoBase -> !idsActuales.contains(juegoBase.getId()));
             }
 
@@ -295,12 +283,12 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public ArrayList<Juego> obtenerJuegos() throws RemoteException {
-        return BD_juegos;
+    public synchronized ArrayList<Juego> obtenerJuegos() {
+        return new ArrayList<>(BD_juegos); 
     }
 
     @Override
-    public void cerrarConexion() throws RemoteException {
+    public synchronized void cerrarConexion() {
         actualizarBD();
         try {
             if (connection != null && !connection.isClosed()) {
@@ -315,7 +303,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public Juego buscarJuego(String fragmentoNombre) throws RemoteException {
+    public synchronized Juego buscarJuego(String fragmentoNombre) {
         for (Juego juego : BD_juegos) {
             if (juego.getNombre().toUpperCase().equals(fragmentoNombre.toUpperCase())) {
                 return juego;
@@ -342,7 +330,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public Pais buscarPais(String fragmentoNombre) throws RemoteException {
+    public synchronized Pais buscarPais(String fragmentoNombre) {
         for (Pais pais : BD_paises) {
             if (pais.getNombre().toUpperCase().equals(fragmentoNombre.toUpperCase())) {
                 return pais;
@@ -360,7 +348,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public Moneda buscarMoneda(String fragmentoCodigo) throws RemoteException {
+    public synchronized Moneda buscarMoneda(String fragmentoCodigo) {
         for (Moneda moneda : BD_moneda) {
             if (moneda.getId().toUpperCase().equals(fragmentoCodigo.toUpperCase())) {
                 return moneda;
@@ -371,7 +359,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public Juego agregarJuego(Juego nuevoJuego) throws RemoteException, JsonProcessingException {
+    public synchronized Juego agregarJuego(Juego nuevoJuego) throws Exception {
         String nombreNuevo = nuevoJuego.getNombre();
         int id = nuevoJuego.getId();
 
@@ -394,7 +382,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public boolean eliminarJuego(String fragmentoNombre) throws RemoteException {
+    public synchronized boolean eliminarJuego(String fragmentoNombre) {
         for (int i = 0; i < BD_juegos.size(); i++) {
             Juego juego = BD_juegos.get(i);
             if (juego.getNombre().toUpperCase().contains(fragmentoNombre.toUpperCase())) {
@@ -408,7 +396,7 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public double convertirPrecioAUSD(double precioLocal, String moneda) throws RemoteException {
+    public synchronized double convertirPrecioAUSD(double precioLocal, String moneda) {
         Moneda moneda_aux = buscarMoneda(moneda);
         if (moneda_aux != null) {
             double precioUSD = precioLocal * moneda_aux.getUSDRatio();
@@ -419,7 +407,7 @@ public class ServerImpl implements InterfazDeServer {
         }
     }
 
-    public void conectarBD() {
+    public synchronized void conectarBD() {
         try {
             if (connection == null || connection.isClosed()) {
                 String url = "jdbc:mysql://localhost:3306/project_db";
@@ -429,7 +417,6 @@ public class ServerImpl implements InterfazDeServer {
                 System.out.println("Conexión con la BD exitosa!");
             }
 
-            // Cargar los juegos desde la BD
             Statement query = connection.createStatement();
             String sql = "SELECT * FROM games";
             ResultSet resultados = query.executeQuery(sql);
@@ -449,7 +436,6 @@ public class ServerImpl implements InterfazDeServer {
 
             System.out.println("\nJUEGOS CARGADOS");
 
-            // Cargar los países desde la BD
             Statement query2 = connection.createStatement();
             String sql2 = "SELECT * FROM countries";
             ResultSet resultados2 = query2.executeQuery(sql2);
@@ -469,7 +455,6 @@ public class ServerImpl implements InterfazDeServer {
 
             System.out.println("\nPAÍSES CARGADOS");
 
-            // Cargar las monedas desde la BD
             Statement query3 = connection.createStatement();
             String sql3 = "SELECT * FROM currencies";
             ResultSet resultados3 = query3.executeQuery(sql3);
@@ -493,11 +478,10 @@ public class ServerImpl implements InterfazDeServer {
         }
     }
 
-    public void actualizarBD() {
+    public synchronized void actualizarBD() {
         try {
             Statement stmt = connection.createStatement();
 
-            // Limpiar las tablas
             stmt.executeUpdate("DELETE FROM games");
             stmt.executeUpdate("DELETE FROM countries");
             stmt.executeUpdate("DELETE FROM currencies");
@@ -511,7 +495,6 @@ public class ServerImpl implements InterfazDeServer {
                 psJuego.executeUpdate();
             }
 
-            // Insertar países
             String insertPais = "INSERT INTO countries (country_code, country_name) VALUES (?, ?)";
             PreparedStatement psPais = connection.prepareStatement(insertPais);
             for (Pais pais : BD_paises) {
@@ -520,7 +503,6 @@ public class ServerImpl implements InterfazDeServer {
                 psPais.executeUpdate();
             }
 
-            // Insertar monedas
             String insertMoneda = "INSERT INTO currencies (currency_code, conversion_rate_to_usd) VALUES (?, ?)";
             PreparedStatement psMoneda = connection.prepareStatement(insertMoneda);
             for (Moneda moneda : BD_moneda) {

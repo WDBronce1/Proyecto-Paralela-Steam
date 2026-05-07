@@ -1,30 +1,49 @@
 package client;
 
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.Arrays;
-import common.InterfazDeServer;
 import common.Juego;
 import common.Pais;
+import common.Request;
+import common.Response;
 
 public class Client {
 
-    private InterfazDeServer server;
+    private static final String HOST = "localhost";
+    private static final int    PORT = 1009;
+
+    private Socket socket;
+    private ObjectOutputStream out;
+    private ObjectInputStream  in;
+
+    public void connect() throws Exception {
+        socket = new Socket(HOST, PORT);                           
+        out    = new ObjectOutputStream(socket.getOutputStream()); 
+        in     = new ObjectInputStream(socket.getInputStream());   
+        System.out.println("Conectado al servidor " + HOST + ":" + PORT);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Response sendRequest(Request request) throws Exception {
+        out.writeObject(request); 
+        out.flush();
+        out.reset();
+        return (Response) in.readObject(); 
+    }
 
     public void startClient() {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost", 1009);
-            server = (InterfazDeServer) registry.lookup("server");
+            connect();
 
             Scanner sc = new Scanner(System.in);
             int opcion = -1;
 
-            
-            
             while (opcion != 0) {
-                System.out.println("\n======= CLIENTE RMI =======");
+                System.out.println("\n======= CLIENTE STEAM =======");
                 System.out.println("[1] Buscar juego por nombre");
                 System.out.println("[2] Ver lista de juegos");
                 System.out.println("[3] Añadir nuevo juego");
@@ -36,32 +55,20 @@ public class Client {
 
                 if (sc.hasNextInt()) {
                     opcion = sc.nextInt();
-                    sc.nextLine(); 
+                    sc.nextLine();
                 } else {
                     System.out.println("Debes ingresar un número válido.");
-                    sc.nextLine(); 
+                    sc.nextLine();
                     continue;
                 }
 
                 switch (opcion) {
-                    case 1:
-                        buscarJuego(sc);
-                        break;
-                    case 2:
-                        listarJuegos();
-                        break;
-                    case 3:
-                    	agregarJuego(sc);
-                    	break;
-                    case 4:
-                        buscarJuegosEnComunFamiliar(sc);
-                        break;
-                    case 5:
-                    	compararPrecioEnRegion(sc);
-                    	break;
-                    case 6:
-                    	compararPrecioEnRegiones(sc);
-                    	break;
+                    case 1: buscarJuego(sc);               break;
+                    case 2: listarJuegos();                break;
+                    case 3: agregarJuego(sc);              break;
+                    case 4: buscarJuegosEnComunFamiliar(sc); break;
+                    case 5: compararPrecioEnRegion(sc);    break;
+                    case 6: compararPrecioEnRegiones(sc);  break;
                     case 0:
                         System.out.println("Cerrando cliente. ¡Hasta luego!");
                         break;
@@ -70,36 +77,40 @@ public class Client {
                 }
             }
 
-            
-            server.cerrarConexion();
+            sendRequest(new Request(Request.Command.CERRAR_CONEXION));
             sc.close();
+            socket.close();
+
         } catch (Exception e) {
-            System.err.println("💥 Error al iniciar cliente: " + e.getMessage());
+            System.err.println("Error al iniciar cliente: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    
     private void listarJuegos() {
         try {
-            ArrayList<Juego> games = server.obtenerJuegos(); // Llamamos al método obtenerJuegos()
+            Response response = sendRequest(new Request(Request.Command.OBTENER_JUEGOS));
+            if (!response.isSuccess()) {
+                System.err.println("Error del servidor: " + response.getErrorMessage());
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            ArrayList<Juego> games = (ArrayList<Juego>) response.getResult();
             System.out.println("\n--- Juegos Registrados ---");
             if (games.isEmpty()) {
                 System.out.println("No hay juegos registrados.");
             } else {
-            	int cont = 0;
+                int cont = 0;
                 for (Juego j : games) {
-                	String nombre = j.getNombre();
-                	int id = j.getId();
-                	cont++;String entrada = String.format(" ● %s (ID: %d)", nombre, id);
+                    cont++;
+                    String entrada = String.format(" ● %s (ID: %d)", j.getNombre(), j.getId());
                     System.out.printf(" || %-70s", entrada);
-                	if (cont % 2 == 0)
-                		System.out.println();
+                    if (cont % 2 == 0) System.out.println();
                 }
                 System.out.println();
             }
         } catch (Exception e) {
-            System.err.println("💥 Error al obtener lista de juegos: " + e.getMessage());
+            System.err.println("Error al obtener lista de juegos: " + e.getMessage());
         }
     }
 
@@ -111,32 +122,39 @@ public class Client {
             System.out.print("Ingrese id del juego: ");
             int id = Integer.parseInt(sc.nextLine());
 
-
             Juego newGame = new Juego(nombre, id);
+            Response response = sendRequest(new Request(Request.Command.AGREGAR_JUEGO, newGame));
 
-            newGame = server.agregarJuego(newGame);
-            
-            if (newGame != null) {
-                System.out.println("✅ Juego añadido exitosamente con ID: " + newGame.getId());
+            if (!response.isSuccess()) {
+                System.err.println("Error del servidor: " + response.getErrorMessage());
+                return;
+            }
+            Juego resultado = (Juego) response.getResult();
+            if (resultado != null) {
+                System.out.println("Juego añadido exitosamente con ID: " + resultado.getId());
             } else {
-                System.out.println("⚠ El juego no pudo ser añadido.");
+                System.out.println("El juego no pudo ser añadido.");
             }
         } catch (Exception e) {
             System.err.println("Error al agregar juego: " + e.getMessage() + ". ID NO VÁLIDA.");
         }
     }
-    
+
     private void buscarJuego(Scanner sc) {
         try {
             System.out.print("Ingrese el nombre del juego a buscar: ");
             String nombre = sc.nextLine();
 
-            Juego juego = server.buscarJuego(nombre);
-            
+            Response response = sendRequest(new Request(Request.Command.BUSCAR_JUEGO, nombre));
+            if (!response.isSuccess()) {
+                System.err.println("Error del servidor: " + response.getErrorMessage());
+                return;
+            }
+            Juego juego = (Juego) response.getResult();
             if (juego != null) {
-            	System.out.println();
-            	System.out.printf("🎮 Juego encontrado: %s (ID: %d)%n", juego.getNombre(), juego.getId());
-            	System.out.println();
+                System.out.println();
+                System.out.printf("Juego encontrado: %s (ID: %d)%n", juego.getNombre(), juego.getId());
+                System.out.println();
             } else {
                 System.out.println("No se encontró el juego: " + nombre);
             }
@@ -144,7 +162,7 @@ public class Client {
             System.err.println("Error al buscar juego: " + e.getMessage());
         }
     }
-    
+
     private void buscarJuegosEnComunFamiliar(Scanner sc) {
         try {
             System.out.print("Ingrese la cantidad de miembros de la familia a analizar (mínimo 2): ");
@@ -171,16 +189,22 @@ public class Client {
 
             System.out.println("\nConsultando en paralelo las bibliotecas de " + cantidad + " perfiles...");
             long startTime = System.currentTimeMillis();
-            
-            ArrayList<Juego> comunes = server.obtenerJuegosEnComun(steamIds);
+
+            Response response = sendRequest(new Request(Request.Command.OBTENER_JUEGOS_EN_COMUN, steamIds));
             long endTime = System.currentTimeMillis();
-            
             System.out.println();
+
+            if (!response.isSuccess()) {
+                System.err.println("Error del servidor: " + response.getErrorMessage());
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            ArrayList<Juego> comunes = (ArrayList<Juego>) response.getResult();
 
             if (comunes.isEmpty()) {
                 System.out.println("No se encontraron juegos en común (o alguno de los perfiles es privado / error en API key).");
             } else {
-                System.out.println("=== 🎮 Tienen " + comunes.size() + " juegos en común ===");
+                System.out.println("=== Tienen " + comunes.size() + " juegos en común ===");
                 for (int i = 0; i < comunes.size(); i++) {
                     System.out.println((i + 1) + ".- " + comunes.get(i).getNombre() + " (ID: " + comunes.get(i).getId() + ")");
                 }
@@ -190,119 +214,107 @@ public class Client {
             e.printStackTrace();
         }
     }
-    
-    
+
     private void compararPrecioEnRegion(Scanner sc) {
         try {
             System.out.print("Ingrese el nombre del juego a comparar: ");
             String nombre = sc.nextLine();
 
-            Juego juego = server.buscarJuego(nombre);
+            Response rJuego = sendRequest(new Request(Request.Command.BUSCAR_JUEGO, nombre));
+            Juego juego = (Juego) rJuego.getResult();
             if (juego == null) {
                 System.out.println("No se encontró el juego: " + nombre);
                 return;
             }
-            
+
             System.out.print("Ingrese el nombre del país a realizar la comparativa: ");
             String nombre_pais = sc.nextLine();
-            
-            
-            Pais pais = server.buscarPais(nombre_pais);
-            
-            
-            double precioLocal = server.getPriceFromApiSteam(juego.getId(), "cl");
-            double precioComparativa = server.getPriceFromApiSteam(juego.getId(), pais.getId());
-            
-            String texto1 = "💰 Precio Local: $" + precioLocal + " USD";
-            String texto2 = "🌍 Precio en " + pais.getNombre() + ": $" + precioComparativa + " USD";
 
+            Response rPais = sendRequest(new Request(Request.Command.BUSCAR_PAIS, nombre_pais));
+            Pais pais = (Pais) rPais.getResult();
+            if (pais == null) {
+                System.out.println("No se encontró el país: " + nombre_pais);
+                return;
+            }
+
+            Response rLocal = sendRequest(new Request(Request.Command.GET_PRICE_FROM_API_STEAM, juego.getId(), "cl"));
+            double precioLocal = (Double) rLocal.getResult();
+
+            Response rComp = sendRequest(new Request(Request.Command.GET_PRICE_FROM_API_STEAM, juego.getId(), pais.getId()));
+            double precioComparativa = (Double) rComp.getResult();
+
+            String texto1 = "Precio Local: $" + precioLocal + " USD";
+            String texto2 = "Precio en " + pais.getNombre() + ": $" + precioComparativa + " USD";
             int maxAncho = Math.max(texto1.length(), texto2.length());
-
             texto1 = String.format("%-" + maxAncho + "s", texto1);
             texto2 = String.format("%-" + maxAncho + "s", texto2);
 
-            System.out.println("\n💱 Comparativa en USD de precios entre el \nPrecio Local (Chile) y " + pais.getNombre() + ":");
+            System.out.println("\nComparativa en USD de precios entre el \nPrecio Local (Chile) y " + pais.getNombre() + ":");
             System.out.println("|| " + texto1 + " ||");
             System.out.println("|| " + texto2 + " ||\n");
-            
-            
+
         } catch (Exception e) {
             System.err.println("Error al buscar juego: " + e.getMessage());
         }
     }
-        
 
-    private void compararPrecioEnRegiones(Scanner sc){
+    private void compararPrecioEnRegiones(Scanner sc) {
         try {
             System.out.print("Ingrese el nombre del juego a comparar: ");
             String nombre = sc.nextLine();
 
-            Juego juego = server.buscarJuego(nombre);
+            Response rJuego = sendRequest(new Request(Request.Command.BUSCAR_JUEGO, nombre));
+            Juego juego = (Juego) rJuego.getResult();
             if (juego == null) {
                 System.out.println("No se encontró el juego: " + nombre);
                 return;
             }
-            
-           
-            // Aquí empezamos a aprovechar el paralelismo usando el nuevo método del servidor
+
             ArrayList<String> codigosPaises = new ArrayList<>(Arrays.asList(
                     "cl", "br", "ca", "es", "in", "cn", "mx", "tr", "au", "us"
             ));
-            
+
             System.out.println("Consultando la API de Steam en paralelo para " + codigosPaises.size() + " países... por favor espera.");
-            
+
             long startTime = System.currentTimeMillis();
-            // Esta única llamada al servidor ejecuta los 10 requests al mismo tiempo en diferentes hilos
-            ArrayList<Double> precios = server.getPricesFromMultipleCountries(juego.getId(), codigosPaises);
+            Response rPrecios = sendRequest(new Request(Request.Command.GET_PRICES_FROM_MULTIPLE_COUNTRIES,
+                    juego.getId(), codigosPaises));
             long endTime = System.currentTimeMillis();
-            
-            double precioLocal = precios.get(0);
-            double precio1 = precios.get(1);
-            double precio2 = precios.get(2);
-            double precio3 = precios.get(3);
-            double precio4 = precios.get(4);
-            double precio5 = precios.get(5);
-            double precio6 = precios.get(6);
-            double precio7 = precios.get(7);
-            double precio8 = precios.get(8);
-            double precio9 = precios.get(9);
-            
+
+            if (!rPrecios.isSuccess()) {
+                System.err.println("Error del servidor: " + rPrecios.getErrorMessage());
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            ArrayList<Double> precios = (ArrayList<Double>) rPrecios.getResult();
+
             System.out.println("¡Datos obtenidos en paralelo en " + (endTime - startTime) + " ms!");
-            
-            System.out.println("\n 🌍 Comparativa en USD de Precios del juego: " + juego.getNombre() + ":");
+            System.out.println("\nComparativa en USD de Precios del juego: " + juego.getNombre() + ":");
+
             String[] lineas = {
-            	    "💰 Precio Local (Chile): $" + precioLocal + " USD",
-            	    "💰 Precio en Brasil: $" + precio1 + " USD",
-            	    "💰 Precio en Canada: $" + precio2 + " USD",
-            	    "💰 Precio en España: $" + precio3 + " USD",
-            	    "💰 Precio en Inglaterra: $" + precio4 + " USD",
-            	    "💰 Precio en China: $" + precio5 + " USD",
-            	    "💰 Precio en Mexico: $" + precio6 + " USD",
-            	    "💰 Precio en Turquía: $" + precio7 + " USD",
-            	    "💰 Precio en Australia: $" + precio8 + " USD",
-            	    "💰 Precio en Estados Unidos $: " + precio9 + " USD"
-            	};
+                "Precio Local (Chile): $"    + precios.get(0) + " USD",
+                "Precio en Brasil: $"        + precios.get(1) + " USD",
+                "Precio en Canada: $"        + precios.get(2) + " USD",
+                "Precio en España: $"        + precios.get(3) + " USD",
+                "Precio en India: $"         + precios.get(4) + " USD",
+                "Precio en China: $"         + precios.get(5) + " USD",
+                "Precio en Mexico: $"        + precios.get(6) + " USD",
+                "Precio en Turquía: $"       + precios.get(7) + " USD",
+                "Precio en Australia: $"     + precios.get(8) + " USD",
+                "Precio en Estados Unidos $: " + precios.get(9) + " USD"
+            };
 
-            
-        	int maxLength = 0;
-        	for (String linea : lineas) {
-        	    maxLength = Math.max(maxLength, linea.length());
-        	}
+            int maxLength = 0;
+            for (String linea : lineas) maxLength = Math.max(maxLength, linea.length());
+            for (String linea : lineas) System.out.println("|| " + String.format("%-" + maxLength + "s", linea) + " ||");
 
-        	for (String linea : lineas) {
-        	    System.out.println("|| " + String.format("%-" + maxLength + "s", linea) + " ||");
-        	}
-            
         } catch (Exception e) {
             System.err.println("Error al buscar juego: " + e.getMessage());
         }
     }
-
 
     public static void main(String[] args) {
         Client cliente = new Client();
         cliente.startClient();
     }
 }
-
-

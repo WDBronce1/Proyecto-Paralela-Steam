@@ -169,13 +169,13 @@ public class Client {
                 steamIds.add(sc.nextLine().trim());
             }
 
-            System.out.println("\nConsultando en paralelo las bibliotecas de " + cantidad + " perfiles... por favor espera.");
+            System.out.println("\nConsultando en paralelo las bibliotecas de " + cantidad + " perfiles...");
             long startTime = System.currentTimeMillis();
             
             ArrayList<Juego> comunes = server.obtenerJuegosEnComun(steamIds);
             long endTime = System.currentTimeMillis();
-
-            System.out.println("¡Búsqueda paralela finalizada en " + (endTime - startTime) + " ms!\n");
+            
+            System.out.println();
 
             if (comunes.isEmpty()) {
                 System.out.println("No se encontraron juegos en común (o alguno de los perfiles es privado / error en API key).");

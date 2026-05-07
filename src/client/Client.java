@@ -4,6 +4,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.Arrays;
 import common.InterfazDeServer;
 import common.Juego;
 import common.Pais;
@@ -24,11 +25,12 @@ public class Client {
             
             while (opcion != 0) {
                 System.out.println("\n======= CLIENTE RMI =======");
-                System.out.println("[1] Ver lista de juegos");
-                System.out.println("[2] Añadir nuevo juego");
-                System.out.println("[3] Buscar juego por nombre");
-                System.out.println("[4] Comparar precio de juego en otro país distinto al local");
-                System.out.println("[5] Comparar precio de juego en 10 países");
+                System.out.println("[1] Buscar juego por nombre");
+                System.out.println("[2] Ver lista de juegos");
+                System.out.println("[3] Añadir nuevo juego");
+                System.out.println("[4] Buscar juegos en común (Modo Familiar)");
+                System.out.println("[5] Comparar precio de juego en otro país distinto al local");
+                System.out.println("[6] Comparar precio de juego en 10 países");
                 System.out.println("[0] Finalizar programa");
                 System.out.print("Ingrese una opción: ");
 
@@ -43,18 +45,21 @@ public class Client {
 
                 switch (opcion) {
                     case 1:
-                        listarJuegos();
+                        buscarJuego(sc);
                         break;
                     case 2:
-                        agregarJuego(sc);
+                        listarJuegos();
                         break;
                     case 3:
-                    	buscarJuego(sc);
+                    	agregarJuego(sc);
                     	break;
                     case 4:
+                        buscarJuegosEnComunFamiliar(sc);
+                        break;
+                    case 5:
                     	compararPrecioEnRegion(sc);
                     	break;
-                    case 5:
+                    case 6:
                     	compararPrecioEnRegiones(sc);
                     	break;
                     case 0:
@@ -140,6 +145,52 @@ public class Client {
         }
     }
     
+    private void buscarJuegosEnComunFamiliar(Scanner sc) {
+        try {
+            System.out.print("Ingrese la cantidad de miembros de la familia a analizar (mínimo 2): ");
+            int cantidad = 0;
+            if (sc.hasNextInt()) {
+                cantidad = sc.nextInt();
+                sc.nextLine();
+            } else {
+                System.out.println("Debe ingresar un número válido.");
+                sc.nextLine();
+                return;
+            }
+
+            if (cantidad < 2) {
+                System.out.println("Debe ingresar al menos 2 miembros.");
+                return;
+            }
+
+            ArrayList<String> steamIds = new ArrayList<>();
+            for (int i = 0; i < cantidad; i++) {
+                System.out.print("Ingrese el Steam ID del miembro " + (i + 1) + ": ");
+                steamIds.add(sc.nextLine().trim());
+            }
+
+            System.out.println("\nConsultando en paralelo las bibliotecas de " + cantidad + " perfiles... por favor espera.");
+            long startTime = System.currentTimeMillis();
+            
+            ArrayList<Juego> comunes = server.obtenerJuegosEnComun(steamIds);
+            long endTime = System.currentTimeMillis();
+
+            System.out.println("¡Búsqueda paralela finalizada en " + (endTime - startTime) + " ms!\n");
+
+            if (comunes.isEmpty()) {
+                System.out.println("No se encontraron juegos en común (o alguno de los perfiles es privado / error en API key).");
+            } else {
+                System.out.println("=== 🎮 Tienen " + comunes.size() + " juegos en común ===");
+                for (int i = 0; i < comunes.size(); i++) {
+                    System.out.println((i + 1) + ".- " + comunes.get(i).getNombre() + " (ID: " + comunes.get(i).getId() + ")");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al buscar juegos en común: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
     
     private void compararPrecioEnRegion(Scanner sc) {
         try {
@@ -193,20 +244,30 @@ public class Client {
             }
             
            
+            // Aquí empezamos a aprovechar el paralelismo usando el nuevo método del servidor
+            ArrayList<String> codigosPaises = new ArrayList<>(Arrays.asList(
+                    "cl", "br", "ca", "es", "in", "cn", "mx", "tr", "au", "us"
+            ));
             
-            double precioLocal = server.getPriceFromApiSteam(juego.getId(), "cl");
-            double precio1 = server.getPriceFromApiSteam(juego.getId(), "br");
-            double precio2 = server.getPriceFromApiSteam(juego.getId(), "ca");
-            double precio3 = server.getPriceFromApiSteam(juego.getId(), "es");
-            double precio4 = server.getPriceFromApiSteam(juego.getId(), "in");
-            double precio5 = server.getPriceFromApiSteam(juego.getId(), "cn");
-            double precio6 = server.getPriceFromApiSteam(juego.getId(), "mx");
-            double precio7 = server.getPriceFromApiSteam(juego.getId(), "tr");
-            double precio8 = server.getPriceFromApiSteam(juego.getId(), "au");
-            double precio9 = server.getPriceFromApiSteam(juego.getId(), "us");
+            System.out.println("Consultando la API de Steam en paralelo para " + codigosPaises.size() + " países... por favor espera.");
             
+            long startTime = System.currentTimeMillis();
+            // Esta única llamada al servidor ejecuta los 10 requests al mismo tiempo en diferentes hilos
+            ArrayList<Double> precios = server.getPricesFromMultipleCountries(juego.getId(), codigosPaises);
+            long endTime = System.currentTimeMillis();
             
+            double precioLocal = precios.get(0);
+            double precio1 = precios.get(1);
+            double precio2 = precios.get(2);
+            double precio3 = precios.get(3);
+            double precio4 = precios.get(4);
+            double precio5 = precios.get(5);
+            double precio6 = precios.get(6);
+            double precio7 = precios.get(7);
+            double precio8 = precios.get(8);
+            double precio9 = precios.get(9);
             
+            System.out.println("¡Datos obtenidos en paralelo en " + (endTime - startTime) + " ms!");
             
             System.out.println("\n 🌍 Comparativa en USD de Precios del juego: " + juego.getNombre() + ":");
             String[] lineas = {

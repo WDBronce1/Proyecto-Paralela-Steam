@@ -20,6 +20,7 @@ public class Client {
     private ObjectOutputStream out;
     private ObjectInputStream  in;
 
+    // Este metodo tiene como objetivo establecer la conexion con el servidor usando sockets
     public void connect() throws Exception {
         socket = new Socket(HOST, PORT);                           
         out    = new ObjectOutputStream(socket.getOutputStream()); 
@@ -28,6 +29,7 @@ public class Client {
     }
 
     @SuppressWarnings("unchecked")
+    // Este metodo tiene como objetivo enviar una peticion al servidor y recibir su respuesta
     private Response sendRequest(Request request) throws Exception {
         out.writeObject(request); 
         out.flush();
@@ -35,6 +37,7 @@ public class Client {
         return (Response) in.readObject(); 
     }
 
+    // Este metodo tiene como objetivo iniciar el ciclo principal de interaccion con el usuario en consola
     public void startClient() {
         try {
             connect();
@@ -97,6 +100,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo pedir al servidor y mostrar la lista de juegos registrados
     private void listarJuegos() {
         ConsoleUtils.printHeader("Juegos Registrados");
         try {
@@ -123,6 +127,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo solicitar los datos al usuario y pedir al servidor que añada un nuevo juego
     private void agregarJuego(Scanner sc) {
         ConsoleUtils.printHeader("Añadir Nuevo Juego");
         try {
@@ -152,6 +157,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo solicitar un nombre y pedir al servidor buscar un juego especifico
     private void buscarJuego(Scanner sc) {
         ConsoleUtils.printHeader("Buscar Juego");
         try {
@@ -175,6 +181,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo solicitar los IDs de Steam y pedir al servidor los juegos que tienen en comun
     private void buscarJuegosEnComunFamiliar(Scanner sc) {
         ConsoleUtils.printHeader("Modo Familiar");
         try {
@@ -227,6 +234,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo solicitar un juego y pedir al servidor comparar su precio en diferentes paises
     private void compararPrecioEnRegiones(Scanner sc) {
         ConsoleUtils.printHeader("Comparar Precio");
         try {
@@ -299,6 +307,7 @@ public class Client {
         }
     }
 
+    // Este metodo tiene como objetivo instanciar e iniciar el cliente
     public static void main(String[] args) {
         Client cliente = new Client();
         cliente.startClient();

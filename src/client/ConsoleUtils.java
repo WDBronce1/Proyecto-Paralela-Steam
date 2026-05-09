@@ -23,18 +23,21 @@ public class ConsoleUtils {
     public static final String HORIZONTAL = "═";
     public static final String VERTICAL = "║";
 
+    // Este metodo tiene como objetivo limpiar la pantalla de la consola
     public static void clearScreen() {
         // Códigos ANSI para limpiar pantalla
         System.out.print("\033[H\033[2J");
         System.out.flush();
     }
 
+    // Este metodo tiene como objetivo pausar la ejecucion hasta que el usuario presione ENTER
     public static void promptEnterKey(Scanner sc) {
         System.out.println();
         System.out.println(GRAY + "Presione ENTER para continuar..." + RESET);
         sc.nextLine();
     }
 
+    // Este metodo tiene como objetivo imprimir el banner principal de la aplicacion
     public static void printBanner() {
         System.out.println(CYAN + BOLD);
         System.out.println("   _____  _______  _______  _______  __   __ ");
@@ -49,6 +52,7 @@ public class ConsoleUtils {
         System.out.println(RESET);
     }
     
+    // Este metodo tiene como objetivo imprimir un encabezado con un titulo centrado
     public static void printHeader(String title) {
         int width = 50;
         int padding = (width - title.length()) / 2;

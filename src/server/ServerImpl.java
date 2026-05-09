@@ -33,12 +33,16 @@ public class ServerImpl implements InterfazDeServer {
     private Connection connection = null;
     private static final String STEAM_API_KEY = "8D9E6D169F3A14A3D20CEA4A6E289CCC";
 
+    // Este metodo tiene como objetivo inicializar el servidor y conectarlo a la
+    // base de datos
     public ServerImpl() {
         conectarBD();
     }
 
     @Override
-    public synchronized double getPriceFromApiSteam(int id_juego, String id_pais) {
+    // Este metodo tiene como objetivo obtener y convertir el precio de un juego
+    // desde la API de Steam a USD
+    public double getPriceFromApiSteam(int id_juego, String id_pais) {
         String output = null;
         try {
             URL apiUrl = new URL(
@@ -93,7 +97,9 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
-    public synchronized Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego)
+    // Este metodo tiene como objetivo obtener la informacion basica de un juego
+    // desde la API de Steam validando su nombre
+    public Juego getGameFromApiSteam(int id_juego, String id_pais, String nombre_juego)
             throws Exception {
         String output = null;
         try {
@@ -157,6 +163,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo obtener los precios en USD de un juego para
+    // multiples paises de manera concurrente
     public ArrayList<Double> getPricesFromMultipleCountries(int id_juego, ArrayList<String> id_paises) {
         int numThreads = Math.min(id_paises.size(), 20);
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -184,6 +192,8 @@ public class ServerImpl implements InterfazDeServer {
         }
     }
 
+    // Este metodo tiene como objetivo obtener todos los juegos que posee un usuario
+    // de Steam especifico
     private ArrayList<Juego> consultarJuegosDelPerfil(String steamId) {
         ArrayList<Juego> juegosDelPerfil = new ArrayList<>();
         String output = null;
@@ -235,6 +245,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo encontrar la interseccion de juegos entre
+    // varios perfiles de Steam de manera concurrente
     public ArrayList<Juego> obtenerJuegosEnComun(ArrayList<String> steamIds) {
         if (steamIds == null || steamIds.isEmpty())
             return new ArrayList<>();
@@ -274,16 +286,22 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo devolver la lista de juegos almacenada en
+    // memoria
     public synchronized ArrayList<Juego> obtenerJuegos() {
         return new ArrayList<>(BD_juegos);
     }
 
     @Override
+    // Este metodo tiene como objetivo devolver la lista de paises almacenada en
+    // memoria
     public synchronized ArrayList<Pais> obtenerPaises() {
         return new ArrayList<>(BD_paises);
     }
 
     @Override
+    // Este metodo tiene como objetivo actualizar la base de datos y cerrar la
+    // conexion con ella
     public synchronized void cerrarConexion() {
         actualizarBD();
         try {
@@ -299,6 +317,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo buscar un juego en memoria usando el nombre
+    // exacto, parcial o la primera palabra
     public synchronized Juego buscarJuego(String fragmentoNombre) {
         for (Juego juego : BD_juegos) {
             if (juego.getNombre().toUpperCase().equals(fragmentoNombre.toUpperCase())) {
@@ -326,6 +346,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo buscar la informacion de una moneda por su
+    // codigo
     public synchronized Moneda buscarMoneda(String fragmentoCodigo) {
         for (Moneda moneda : BD_moneda) {
             if (moneda.getId().toUpperCase().equals(fragmentoCodigo.toUpperCase())) {
@@ -337,6 +359,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo agregar un nuevo juego a la memoria
+    // verificando previamente que exista en la API de Steam
     public synchronized Juego agregarJuego(Juego nuevoJuego) throws Exception {
         String nombreNuevo = nuevoJuego.getNombre();
         int id = nuevoJuego.getId();
@@ -360,6 +384,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo buscar y eliminar un juego de la memoria por
+    // nombre parcial
     public synchronized boolean eliminarJuego(String fragmentoNombre) {
         for (int i = 0; i < BD_juegos.size(); i++) {
             Juego juego = BD_juegos.get(i);
@@ -374,6 +400,8 @@ public class ServerImpl implements InterfazDeServer {
     }
 
     @Override
+    // Este metodo tiene como objetivo calcular y retornar el equivalente en dolares
+    // de un precio local
     public synchronized double convertirPrecioAUSD(double precioLocal, String moneda) {
         Moneda moneda_aux = buscarMoneda(moneda);
         if (moneda_aux != null) {
@@ -385,6 +413,8 @@ public class ServerImpl implements InterfazDeServer {
         }
     }
 
+    // Este metodo tiene como objetivo establecer la conexion a MySQL y cargar los
+    // datos iniciales a memoria
     public synchronized void conectarBD() {
         try {
             if (connection == null || connection.isClosed()) {
@@ -456,10 +486,13 @@ public class ServerImpl implements InterfazDeServer {
         }
     }
 
+    // Este metodo tiene como objetivo sincronizar los cambios locales en memoria
+    // volcando la informacion hacia la base de datos
     public synchronized void actualizarBD() {
         try {
-            Statement stmt = connection.createStatement();
+            connection.setAutoCommit(false);
 
+            Statement stmt = connection.createStatement();
             stmt.executeUpdate("DELETE FROM games");
             stmt.executeUpdate("DELETE FROM currencies");
 
@@ -480,11 +513,25 @@ public class ServerImpl implements InterfazDeServer {
                 psMoneda.executeUpdate();
             }
 
+            connection.commit();
             System.out.println("Base de datos actualizada correctamente con los datos actuales en memoria.");
 
         } catch (SQLException e) {
             e.printStackTrace();
-            System.out.println("Error al actualizar la base de datos.");
+            System.out.println("Error al actualizar la base de datos. Realizando rollback...");
+            try {
+                connection.rollback();
+                System.out.println("Rollback ejecutado: la base de datos se mantiene en su estado anterior.");
+            } catch (SQLException rollbackEx) {
+                rollbackEx.printStackTrace();
+                System.out.println("Error critico: no se pudo ejecutar el rollback.");
+            }
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 }

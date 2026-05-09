@@ -18,12 +18,14 @@ public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final ServerImpl server;
 
+    // Este metodo tiene como objetivo inicializar el manejador para un cliente especifico con su socket y referencia al servidor
     public ClientHandler(Socket clientSocket, ServerImpl server) {
         this.clientSocket = clientSocket;
         this.server = server;
     }
 
     @Override
+    // Este metodo tiene como objetivo mantener el ciclo de escucha de peticiones del cliente conectado
     public void run() {
         String clientAddress = clientSocket.getInetAddress().getHostAddress();
         System.out.println("[+] Cliente conectado: " + clientAddress);
@@ -67,6 +69,7 @@ public class ClientHandler implements Runnable {
     }
 
     @SuppressWarnings("unchecked")
+    // Este metodo tiene como objetivo recibir una peticion, identificar su comando y ejecutar la accion correspondiente en el servidor
     private Response dispatch(Request request) throws Exception {
         Object[] p = request.getParams();
 

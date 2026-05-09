@@ -23,15 +23,18 @@ public class Request implements Serializable {
     private Command command;
     private Object[] params;
 
+    // Este metodo tiene como objetivo crear una nueva peticion con un comando y sus parametros
     public Request(Command command, Object... params) {
         this.command = command;
         this.params = params;
     }
 
+    // Este metodo tiene como objetivo retornar el comando de la peticion
     public Command getCommand() {
         return command;
     }
 
+    // Este metodo tiene como objetivo retornar los parametros de la peticion
     public Object[] getParams() {
         return params;
     }

@@ -7,6 +7,7 @@ import java.net.Socket;
 public class RunServer {
     private static final int PORT = 1009;
 
+    // Este metodo tiene como objetivo iniciar el servidor e instanciar un ClientHandler para cada conexion entrante
     public static void main(String[] args) {
         ServerImpl server = new ServerImpl();
 

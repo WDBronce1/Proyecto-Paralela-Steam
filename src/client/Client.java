@@ -13,19 +13,18 @@ import common.Response;
 
 public class Client {
 
-    private static final String HOST = "localhost";
-    private static final int    PORT = 1009;
+    private static final int PORT = 1009;
 
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream  in;
 
     // Este metodo tiene como objetivo establecer la conexion con el servidor usando sockets
-    public void connect() throws Exception {
-        socket = new Socket(HOST, PORT);                           
+    public void connect(String host) throws Exception {
+        socket = new Socket(host, PORT);                           
         out    = new ObjectOutputStream(socket.getOutputStream()); 
         in     = new ObjectInputStream(socket.getInputStream());   
-        System.out.println("Conectado al servidor " + HOST + ":" + PORT);
+        System.out.println("Conectado al servidor " + host + ":" + PORT);
     }
 
     @SuppressWarnings("unchecked")
@@ -38,9 +37,9 @@ public class Client {
     }
 
     // Este metodo tiene como objetivo iniciar el ciclo principal de interaccion con el usuario en consola
-    public void startClient() {
+    public void startClient(String host) {
         try {
-            connect();
+            connect(host);
 
             Scanner sc = new Scanner(System.in);
             int opcion = -1;
@@ -309,7 +308,8 @@ public class Client {
 
     // Este metodo tiene como objetivo instanciar e iniciar el cliente
     public static void main(String[] args) {
+        String host = (args.length > 0) ? args[0] : "localhost";
         Client cliente = new Client();
-        cliente.startClient();
+        cliente.startClient(host);
     }
 }

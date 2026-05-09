@@ -1,2 +1,47 @@
-# Proyecto-1-computacion-paralela-y-distribuida
-Proyecto-Paralela-Steam
+# Proyecto Computación Paralela y Distribuida - Steam
+
+Este repositorio contiene todo el código fuente del proyecto, el cual es una aplicación distribuida en Java enfocada en funcionalidades estilo Steam (como comparación de precios regionales y Family Mode).
+
+**Nota importante:** Todo el código del proyecto se encuentra alojado en este repositorio de GitHub, junto con una carpeta que contiene los archivos de la base de datos (`.sql`) necesarios para su funcionamiento.
+
+---
+
+## 🛠️ Requisitos Previos
+
+Para ejecutar este proyecto y alojar su base de datos localmente, necesitarás tener instalado **XAMPP** u otro entorno similar (WAMP, MAMP, etc).
+
+### 1. Instalación de XAMPP
+
+1. Dirígete a la página oficial de [Apache Friends](https://www.apachefriends.org/es/index.html) y descarga la versión de XAMPP correspondiente a tu sistema operativo (Windows, Linux o macOS).
+2. Ejecuta el instalador descargado y sigue las instrucciones del asistente de instalación. 
+   - *Nota:* Es imprescindible que instales los componentes **MySQL** y **phpMyAdmin**, ya que son necesarios para montar la base de datos.
+3. Una vez instalado, abre el **Panel de Control de XAMPP**.
+4. Inicia los módulos de **Apache** y **MySQL** haciendo clic en los botones **"Start"** correspondientes.
+
+### 2. Integración de la Base de Datos
+
+Para integrar la base de datos adjunta en el repositorio a tu entorno local, sigue estos pasos:
+
+1. Asegúrate de que los módulos de Apache y MySQL estén en ejecución (con fondo verde) en tu Panel de Control de XAMPP.
+2. Abre tu navegador web y dirígete a la siguiente dirección: [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/).
+3. En el panel izquierdo de phpMyAdmin, haz clic en **"Nueva"** para crear una nueva base de datos.
+4. Ingresa el nombre de la base de datos (por ejemplo, `distribuida`, `db_steam` o el nombre especificado en la conexión de Java) y selecciona la codificación (se recomienda `utf8mb4_general_ci` o `utf8_general_ci`). Luego haz clic en **"Crear"**.
+5. Selecciona la base de datos recién creada haciendo clic sobre ella en el panel izquierdo.
+6. En el menú superior de opciones, haz clic en la pestaña **"Importar"**.
+7. En la sección "Archivo a importar", haz clic en el botón **"Seleccionar archivo"** (o "Choose File").
+8. Navega hasta la carpeta del proyecto que clonaste de GitHub, busca la carpeta correspondiente a la base de datos y selecciona el archivo `.sql` que contiene la estructura y los datos.
+9. Desplázate hasta el final de la página y haz clic en el botón **"Importar"** (o "Go") para ejecutar el script. Si todo sale bien, verás un mensaje de éxito y las tablas aparecerán en tu base de datos.
+
+---
+
+## 🚀 Ejecución del Proyecto
+
+1. Clona este repositorio en tu máquina local (si no lo has hecho aún):
+   ```bash
+   git clone https://github.com/WDBronce1/Proyecto-Paralela-Steam.git
+   ```
+2. Abre el proyecto en tu IDE de Java preferido (por ejemplo, Eclipse, IntelliJ IDEA o VS Code).
+3. **Configuración de Conexión:** Revisa las clases de Java encargadas de la conexión (como `ServerImpl.java` o la que utilices para la BD). Asegúrate de que los credenciales de JDBC coincidan con tu servidor local. Por defecto, en XAMPP el usuario es `root` y la contraseña está en blanco (`""`).
+4. **Dependencias:** Asegúrate de tener el conector JDBC de MySQL (`mysql-connector-java.jar`) en tu Build Path o carpeta `lib`.
+5. Ejecuta primero la clase del servidor (`RunServer.java`) para levantar el servicio RMI/Sockets.
+6. Finalmente, ejecuta las instancias del cliente (`RunClient.java`) para interactuar con la aplicación.

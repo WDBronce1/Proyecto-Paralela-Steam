@@ -41,7 +41,5 @@ Para integrar la base de datos adjunta en el repositorio a tu entorno local, sig
    git clone https://github.com/WDBronce1/Proyecto-Paralela-Steam.git
    ```
 2. Abre el proyecto en tu IDE de Java preferido (por ejemplo, Eclipse, IntelliJ IDEA o VS Code).
-3. **Configuración de Conexión:** Revisa las clases de Java encargadas de la conexión (como `ServerImpl.java` o la que utilices para la BD). Asegúrate de que los credenciales de JDBC coincidan con tu servidor local. Por defecto, en XAMPP el usuario es `root` y la contraseña está en blanco (`""`).
-4. **Dependencias:** Asegúrate de tener el conector JDBC de MySQL (`mysql-connector-java.jar`) en tu Build Path o carpeta `lib`.
-5. Ejecuta primero la clase del servidor (`RunServer.java`) para levantar el servicio RMI/Sockets.
-6. Finalmente, ejecuta las instancias del cliente (`RunClient.java`) para interactuar con la aplicación.
+3. Ejecuta primero la clase del servidor (`RunServer.java`) para levantar el servicio RMI/Sockets.
+4. Finalmente, ejecuta las instancias del cliente (`RunClient.java`) para interactuar con la aplicación.

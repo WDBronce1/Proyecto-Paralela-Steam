@@ -25,7 +25,7 @@ Para integrar la base de datos adjunta en el repositorio a tu entorno local, sig
 1. Asegúrate de que los módulos de Apache y MySQL estén en ejecución (con fondo verde) en tu Panel de Control de XAMPP.
 2. Abre tu navegador web y dirígete a la siguiente dirección: [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/).
 3. En el panel izquierdo de phpMyAdmin, haz clic en **"Nueva"** para crear una nueva base de datos.
-4. Ingresa el nombre de la base de datos (por ejemplo, `distribuida`, `db_steam` o el nombre especificado en la conexión de Java) y selecciona la codificación (se recomienda `utf8mb4_general_ci` o `utf8_general_ci`). Luego haz clic en **"Crear"**.
+4. Ingresa el nombre de la base de datos "project_db". Luego haz clic en **"Crear"**.
 5. Selecciona la base de datos recién creada haciendo clic sobre ella en el panel izquierdo.
 6. En el menú superior de opciones, haz clic en la pestaña **"Importar"**.
 7. En la sección "Archivo a importar", haz clic en el botón **"Seleccionar archivo"** (o "Choose File").

@@ -29,7 +29,7 @@ Para integrar la base de datos adjunta en el repositorio a tu entorno local, sig
 5. Selecciona la base de datos recién creada haciendo clic sobre ella en el panel izquierdo.
 6. En el menú superior de opciones, haz clic en la pestaña **"Importar"**.
 7. En la sección "Archivo a importar", haz clic en el botón **"Seleccionar archivo"** (o "Choose File").
-8. Navega hasta la carpeta del proyecto que clonaste de GitHub, busca la carpeta correspondiente a la base de datos y selecciona el archivo `.sql` que contiene la estructura y los datos.
+8. Navega hasta la carpeta del proyecto que clonaste de GitHub, busca la carpeta `BD`, correspondiente a la base de datos y selecciona el archivo `project_db.sql` que contiene la estructura y los datos.
 9. Desplázate hasta el final de la página y haz clic en el botón **"Importar"** (o "Go") para ejecutar el script. Si todo sale bien, verás un mensaje de éxito y las tablas aparecerán en tu base de datos.
 
 ---
